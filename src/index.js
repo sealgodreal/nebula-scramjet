@@ -115,8 +115,8 @@ fastify.get("/learn/study/*", (req, reply) => {
 	<script src="/scram/scramjet.all.js"></script>
 	<script src="/baremux/index.js"></script>
 	<script>
-		const loadingEl   = document.getElementById("loading");
-		const statusEl    = document.getElementById("status-text");
+		const loadingEl = document.getElementById("loading");
+		const statusEl  = document.getElementById("status-text");
 
 		function setStatus(msg, isError = false) {
 			statusEl.textContent = msg;
@@ -141,19 +141,6 @@ fastify.get("/learn/study/*", (req, reply) => {
 				console.warn("Cache clear failed:", e);
 			}
 		}
-			
-		await clearCachesAndSW();
-
-		const { ScramjetController } = $scramjetLoadController();
-		const scramjet = new ScramjetController({
-			files: {
-				wasm: "/scram/scramjet.wasm.wasm",
-				all:  "/scram/scramjet.all.js",
-				sync: "/scram/scramjet.sync.js",
-			},
-		});
-		scramjet.init();
-		const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
 
 		function syncTitleAndFavicon(iframeEl) {
 			let lastTitle   = "";
@@ -172,7 +159,7 @@ fastify.get("/learn/study/*", (req, reply) => {
 					lastTitle = newTitle;
 					document.title = newTitle;
 				}
-				const iconLink  = doc.querySelector('link[rel~="icon"], link[rel~="shortcut"]');
+				const iconLink   = doc.querySelector('link[rel~="icon"], link[rel~="shortcut"]');
 				const newFavicon = iconLink ? iconLink.href : "";
 				if (newFavicon && newFavicon !== lastFavicon) {
 					lastFavicon = newFavicon;
@@ -208,9 +195,20 @@ fastify.get("/learn/study/*", (req, reply) => {
 					await navigator.serviceWorker.register("/sw.js");
 					await navigator.serviceWorker.ready;
 				} catch (e) {
-					throw new Error("Failed to register service worker.");
+					throw new Error("Failed to register service worker: " + e.message);
 				}
 
+				const { ScramjetController } = $scramjetLoadController();
+				const scramjet = new ScramjetController({
+					files: {
+						wasm: "/scram/scramjet.wasm.wasm",
+						all:  "/scram/scramjet.all.js",
+						sync: "/scram/scramjet.sync.js",
+					},
+				});
+				scramjet.init();
+
+				const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
 				const wispUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
 				if ((await connection.getTransport()) !== "/libcurl/index.mjs") {
 					await connection.setTransport("/libcurl/index.mjs", [{ websocket: wispUrl }]);
