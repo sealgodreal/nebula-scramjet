@@ -136,14 +136,6 @@ fastify.get("/learn/study/*", (req, reply) => {
 				if (window.caches) {
 					const keys = await caches.keys();
 					await Promise.all(keys.map(k => caches.delete(k)));
-
-					// yes, twice
-    				const keys = await caches.keys();
-    				for (const key of keys) await caches.delete(key);
-
-    				sessionStorage.clear();
-					localStorage.clear();
-
 				}
 			} catch (e) {
 				console.warn("Cache clear failed:", e);
