@@ -124,22 +124,35 @@ fastify.get("/learn/study/*", (req, reply) => {
 		}
 
 		async function clearCachesAndSW() {
-			try {
-				if (navigator.serviceWorker) {
-					const regs = await navigator.serviceWorker.getRegistrations();
-					await Promise.all(regs.map(r => r.unregister()));
-				}
-			} catch (e) {
-				console.warn("SW unregister failed:", e);
-			}
-			try {
-				if (window.caches) {
-					const keys = await caches.keys();
-					await Promise.all(keys.map(k => caches.delete(k)));
-				}
-			} catch (e) {
-				console.warn("Cache clear failed:", e);
-			}
+    		try {
+        		if (navigator.serviceWorker) {
+            		const regs = await navigator.serviceWorker.getRegistrations();
+            		await Promise.all(regs.map(r => r.unregister()));
+        		}
+    		} catch (e) {
+        		console.warn("SW unregister failed:", e);
+    		}
+    		try {
+        		if (window.caches) {
+            		const keys = await caches.keys();
+            		await Promise.all(keys.map(k => caches.delete(k)));
+        		}
+    		} catch (e) {
+        		console.warn("Cache clear failed:", e);
+    		}
+    		try {
+        		if (indexedDB.databases) {
+            		const dbs = await indexedDB.databases();
+            		await Promise.all(dbs.map(db => new Promise((res, rej) => {
+                		const req = indexedDB.deleteDatabase(db.name);
+                		req.onsuccess = res;
+                		req.onerror = rej;
+                		req.onblocked = res;
+            		})));
+        		}
+    		} catch (e) {
+        		console.warn("IDB clear failed:", e);
+    		}
 		}
 
 		function syncTitleAndFavicon(iframeEl) {
