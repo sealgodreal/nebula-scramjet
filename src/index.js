@@ -115,8 +115,8 @@ fastify.get("/learn/study/*", (req, reply) => {
 	<script src="/scram/scramjet.all.js"></script>
 	<script src="/baremux/index.js"></script>
 	<script>
-		const loadingEl = document.getElementById("loading");
-		const statusEl  = document.getElementById("status-text");
+		const loadingEl   = document.getElementById("loading");
+		const statusEl    = document.getElementById("status-text");
 
 		function setStatus(msg, isError = false) {
 			statusEl.textContent = msg;
@@ -124,36 +124,34 @@ fastify.get("/learn/study/*", (req, reply) => {
 		}
 
 		async function clearCachesAndSW() {
-    		try {
-        		if (navigator.serviceWorker) {
-            		const regs = await navigator.serviceWorker.getRegistrations();
-            		await Promise.all(regs.map(r => r.unregister()));
-        		}
-    		} catch (e) {
-        		console.warn("SW unregister failed:", e);
-    		}
-    		try {
-        		if (window.caches) {
-            		const keys = await caches.keys();
-            		await Promise.all(keys.map(k => caches.delete(k)));
-        		}
-    		} catch (e) {
-        		console.warn("Cache clear failed:", e);
-    		}
-    		try {
-        		if (indexedDB.databases) {
-            		const dbs = await indexedDB.databases();
-            		await Promise.all(dbs.map(db => new Promise((res, rej) => {
-                		const req = indexedDB.deleteDatabase(db.name);
-                		req.onsuccess = res;
-                		req.onerror = rej;
-                		req.onblocked = res;
-            		})));
-        		}
-    		} catch (e) {
-        		console.warn("IDB clear failed:", e);
-    		}
+			try {
+				if (navigator.serviceWorker) {
+					const regs = await navigator.serviceWorker.getRegistrations();
+					await Promise.all(regs.map(r => r.unregister()));
+				}
+			} catch (e) {
+				console.warn("SW unregister failed:", e);
+			}
+			try {
+				if (window.caches) {
+					const keys = await caches.keys();
+					await Promise.all(keys.map(k => caches.delete(k)));
+				}
+			} catch (e) {
+				console.warn("Cache clear failed:", e);
+			}
 		}
+
+		const { ScramjetController } = $scramjetLoadController();
+		const scramjet = new ScramjetController({
+			files: {
+				wasm: "/scram/scramjet.wasm.wasm",
+				all:  "/scram/scramjet.all.js",
+				sync: "/scram/scramjet.sync.js",
+			},
+		});
+		scramjet.init();
+		const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
 
 		function syncTitleAndFavicon(iframeEl) {
 			let lastTitle   = "";
@@ -172,7 +170,7 @@ fastify.get("/learn/study/*", (req, reply) => {
 					lastTitle = newTitle;
 					document.title = newTitle;
 				}
-				const iconLink   = doc.querySelector('link[rel~="icon"], link[rel~="shortcut"]');
+				const iconLink  = doc.querySelector('link[rel~="icon"], link[rel~="shortcut"]');
 				const newFavicon = iconLink ? iconLink.href : "";
 				if (newFavicon && newFavicon !== lastFavicon) {
 					lastFavicon = newFavicon;
@@ -208,20 +206,9 @@ fastify.get("/learn/study/*", (req, reply) => {
 					await navigator.serviceWorker.register("/sw.js");
 					await navigator.serviceWorker.ready;
 				} catch (e) {
-					throw new Error("Failed to register service worker: " + e.message);
+					throw new Error("Failed to register service worker.");
 				}
 
-				const { ScramjetController } = $scramjetLoadController();
-				const scramjet = new ScramjetController({
-					files: {
-						wasm: "/scram/scramjet.wasm.wasm",
-						all:  "/scram/scramjet.all.js",
-						sync: "/scram/scramjet.sync.js",
-					},
-				});
-				scramjet.init();
-
-				const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
 				const wispUrl = (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/wisp/";
 				if ((await connection.getTransport()) !== "/libcurl/index.mjs") {
 					await connection.setTransport("/libcurl/index.mjs", [{ websocket: wispUrl }]);
